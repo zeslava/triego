@@ -8,6 +8,7 @@ type Trie interface {
 	Insert([]byte, interface{}) Trie
 	Delete([]byte) bool
 	Find([]byte) (Trie, bool)
+	Sub(byte) (Trie, bool)
 	Value() interface{}
 }
 
@@ -45,10 +46,13 @@ func (t *trie) Delete(path []byte) bool {
 // Find finds a sub-tree by path(key)
 func (t *trie) Find(path []byte) (Trie, bool) {
 	v := t.take(path)
-	if v == nil {
-		return nil, false
-	}
-	return v, true
+	return v, v != nil
+}
+
+// Sub returns sub-tree in next level if exists
+func (t *trie) Sub(key byte) (Trie, bool) {
+	v := t.getChild(key)
+	return v, v != nil
 }
 
 // Value returns a value stored in root of tree
