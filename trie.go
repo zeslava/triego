@@ -1,122 +1,124 @@
 package triego
 
-import "sort"
-
 // Trie is interface for radix tree
 // Trie performs both tree and node roles, because node == sub-tree
 type Trie interface {
-	Insert([]byte, interface{}) Trie
-	Delete([]byte) bool
-	Find([]byte) (Trie, bool)
-	Sub(byte) (Trie, bool)
+	// Insert inserting value by key
+	Insert(key []byte, value interface{}) Trie
+	// Delete remove sub-tree by key
+	Delete(key []byte) bool
+	// Find finds a sub-tree by key
+	Find(key []byte) (Trie, bool)
+	// Sub returns sub-tree in next level if exists
+	Sub(k byte) (Trie, bool)
+	// Value returns a value stored in root of tree
 	Value() interface{}
 }
 
 // trie implements Trie interface
 type trie struct {
-	key byte
-	val interface{}
-	sub []*trie
+	key      byte
+	val      interface{}
+	bmap     bmap
+	children []*trie
 }
 
-// New creates a Trie
-func New() Trie {
-	return &trie{}
+// New creates a default Trie
+func New() *trie {
+	return newTrieWithKey(0)
 }
 
-// Insert inserting value by path(key)
-func (t *trie) Insert(path []byte, value interface{}) Trie {
+func newTrieWithKey(key byte) *trie {
+	return &trie{key: key, children: []*trie{}}
+}
+
+func (t *trie) Insert(key []byte, value interface{}) Trie {
 	cur := t
-	for _, k := range path {
+	for _, k := range key {
 		cur = cur.insChild(k)
 	}
 	cur.val = value
 	return cur
 }
 
-// Delete remove sub-tree by path(key)
-func (t *trie) Delete(path []byte) bool {
-	ch := t.take(path[:len(path)-1])
+func (t *trie) Delete(key []byte) bool {
+	if len(key) == 0 {
+		return false
+	}
+	ch := t.take(key[:len(key)-1])
 	if ch == nil {
 		return false
 	}
-	return ch.delChild(path[len(path)-1])
+	return ch.delChild(key[len(key)-1])
 }
 
-// Find finds a sub-tree by path(key)
-func (t *trie) Find(path []byte) (Trie, bool) {
-	v := t.take(path)
+func (t *trie) Find(key []byte) (Trie, bool) {
+	if len(key) == 0 {
+		return nil, false
+	}
+	v := t.take(key)
 	return v, v != nil
 }
 
-// Sub returns sub-tree in next level if exists
 func (t *trie) Sub(key byte) (Trie, bool) {
-	v := t.getChild(key)
-	return v, v != nil
+	child := t.getChild(key)
+	return child, child != nil
 }
 
-// Value returns a value stored in root of tree
 func (t *trie) Value() interface{} {
 	return t.val
 }
 
-// take returns sub-tree by path(key)
-func (t *trie) take(path []byte) *trie {
+// take returns sub-tree by key
+func (t *trie) take(key []byte) *trie {
 	cur := t
-	for _, k := range path {
-		if child := cur.getChild(k); child != nil {
-			cur = child
-		} else {
-			return cur
+	for i := 0; i < len(key); i++ {
+		cur = cur.getChild(key[i])
+		if cur == nil {
+			return nil
 		}
 	}
-
 	return cur
 }
 
 // insChild inserts new child with the key, or return child if already exists
 func (t *trie) insChild(key byte) *trie {
-	if t.sub == nil {
-		v := &trie{key: key}
-		t.sub = []*trie{v}
-		return v
+	child := t.getChild(key)
+	if child != nil {
+		return child
 	}
 
-	v := t.getChild(key)
-	if v != nil {
-		return v
-	}
-
-	v = &trie{key: key}
-	i := sort.Search(len(t.sub), func(i int) bool { return (t.sub)[i].key >= key })
-	if i == len(t.sub) {
-		t.sub = append(t.sub, v)
+	child = newTrieWithKey(key)
+	t.bmap.set(key)
+	i := t.bmap.index(key)
+	if i == len(t.children) {
+		t.children = append(t.children, child)
 	} else {
-		t.sub = append(t.sub, nil)
-		copy(t.sub[i+1:], t.sub[i:])
-		(t.sub)[i] = v
+		t.children = append(t.children, nil)
+		copy(t.children[i+1:], t.children[i:])
+		t.children[i] = child
 	}
-	return v
+	return child
 }
 
 // getChild returns child with the key
 func (t *trie) getChild(key byte) *trie {
-	i := sort.Search(len(t.sub), func(i int) bool { return (t.sub)[i].key >= key })
-	if i < len(t.sub) && (t.sub)[i].key == key {
-		return t.sub[i]
+	i := t.bmap.index(key)
+	if i == -1 {
+		return nil
 	}
-	return nil
+	return t.children[i]
 }
 
 // delChild removes child with the key and returns flag is removed or not
 func (t *trie) delChild(key byte) bool {
-	num := len(t.sub)
-	i := sort.Search(num, func(i int) bool { return t.sub[i].key >= key })
-	if i < len(t.sub) && (t.sub)[i].key == key {
-		copy(t.sub[i:], t.sub[i+1:])
-		t.sub[len(t.sub)-1] = nil
-		t.sub = t.sub[:len(t.sub)-1]
-		return true
+	i := t.bmap.index(key)
+	if i == -1 {
+		return false
 	}
-	return false
+	copy(t.children[i:], t.children[i+1:])
+	t.children[len(t.children)-1] = nil
+	t.children = t.children[:len(t.children)-1]
+	t.bmap.unset(key)
+	return true
 }
