@@ -1,13 +1,10 @@
 package triego
 
 import (
-	"fmt"
 	"math/rand"
 	"strconv"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func Test_bmap(t *testing.T) {
@@ -26,7 +23,9 @@ func Test_bmap(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		bm := bmap{}
 		for i := 0; i < 255; i++ {
-			assert.Equal(t, -1, bm.index(byte(i)))
+			if bm.index(byte(i)) > -1 {
+				t.Fail()
+			}
 		}
 	})
 
@@ -40,14 +39,18 @@ func Test_bmap(t *testing.T) {
 				b := b
 				bm.set(b)
 				index := bm.index(b)
-				assert.Equal(t, i, index, fmt.Sprintf("%d: %d", i, b))
+				if index != i {
+					t.Errorf("%d: %d", i, b)
+				}
 				if i != index {
 					index = bm.index(b)
 				}
 			}
 
 			for _, b := range bs {
-				assert.True(t, bm.has(b))
+				if !bm.has(b) {
+					t.Fail()
+				}
 			}
 
 			for _, b := range bs {
@@ -55,7 +58,9 @@ func Test_bmap(t *testing.T) {
 			}
 
 			for i := 0; i < 255; i++ {
-				assert.False(t, bm.has(byte(i)))
+				if bm.has(byte(i)) {
+					t.Fail()
+				}
 			}
 		})
 	}

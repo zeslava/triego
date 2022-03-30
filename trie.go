@@ -1,38 +1,38 @@
 package triego
 
-// Trie is interface for radix tree
+// Trie is interface for prefix tree
 // Trie performs both tree and node roles, because node == sub-tree
-type Trie interface {
+type Trie[ValueType any] interface {
 	// Insert inserting value by key
-	Insert(key []byte, value interface{}) Trie
-	// Delete remove sub-tree by key
+	Insert(key []byte, value ValueType) Trie[ValueType]
+	// Delete remove subtree by key
 	Delete(key []byte) bool
-	// Find finds a sub-tree by key
-	Find(key []byte) (Trie, bool)
-	// Sub returns sub-tree in next level if exists
-	Sub(k byte) (Trie, bool)
+	// Find finds a subtree by key
+	Find(key []byte) (Trie[ValueType], bool)
+	// Sub returns subtree in next level if exists
+	Sub(k byte) (Trie[ValueType], bool)
 	// Value returns a value stored in root of tree
-	Value() interface{}
+	Value() ValueType
 }
 
 // trie implements Trie interface
-type trie struct {
+type trie[ValueType any] struct {
 	key      byte
-	val      interface{}
+	val      ValueType
 	bmap     bmap
-	children []*trie
+	children []*trie[ValueType]
 }
 
 // New creates a default Trie
-func New() *trie {
-	return newTrieWithKey(0)
+func New[ValueType any]() *trie[ValueType] {
+	return newTrieWithKey[ValueType](0)
 }
 
-func newTrieWithKey(key byte) *trie {
-	return &trie{key: key, children: []*trie{}}
+func newTrieWithKey[ValueType any](key byte) *trie[ValueType] {
+	return &trie[ValueType]{key: key, children: make([]*trie[ValueType], 0)}
 }
 
-func (t *trie) Insert(key []byte, value interface{}) Trie {
+func (t *trie[ValueType]) Insert(key []byte, value ValueType) Trie[ValueType] {
 	cur := t
 	for _, k := range key {
 		cur = cur.insChild(k)
@@ -41,7 +41,7 @@ func (t *trie) Insert(key []byte, value interface{}) Trie {
 	return cur
 }
 
-func (t *trie) Delete(key []byte) bool {
+func (t *trie[ValueType]) Delete(key []byte) bool {
 	if len(key) == 0 {
 		return false
 	}
@@ -52,7 +52,7 @@ func (t *trie) Delete(key []byte) bool {
 	return ch.delChild(key[len(key)-1])
 }
 
-func (t *trie) Find(key []byte) (Trie, bool) {
+func (t *trie[ValueType]) Find(key []byte) (Trie[ValueType], bool) {
 	if len(key) == 0 {
 		return nil, false
 	}
@@ -60,17 +60,17 @@ func (t *trie) Find(key []byte) (Trie, bool) {
 	return v, v != nil
 }
 
-func (t *trie) Sub(key byte) (Trie, bool) {
+func (t *trie[ValueType]) Sub(key byte) (Trie[ValueType], bool) {
 	child := t.getChild(key)
 	return child, child != nil
 }
 
-func (t *trie) Value() interface{} {
+func (t *trie[ValueType]) Value() ValueType {
 	return t.val
 }
 
-// take returns sub-tree by key
-func (t *trie) take(key []byte) *trie {
+// take returns subtree by key
+func (t *trie[ValueType]) take(key []byte) *trie[ValueType] {
 	cur := t
 	for i := 0; i < len(key); i++ {
 		cur = cur.getChild(key[i])
@@ -82,13 +82,13 @@ func (t *trie) take(key []byte) *trie {
 }
 
 // insChild inserts new child with the key, or return child if already exists
-func (t *trie) insChild(key byte) *trie {
+func (t *trie[ValueType]) insChild(key byte) *trie[ValueType] {
 	child := t.getChild(key)
 	if child != nil {
 		return child
 	}
 
-	child = newTrieWithKey(key)
+	child = newTrieWithKey[ValueType](key)
 	t.bmap.set(key)
 	i := t.bmap.index(key)
 	if i == len(t.children) {
@@ -102,7 +102,7 @@ func (t *trie) insChild(key byte) *trie {
 }
 
 // getChild returns child with the key
-func (t *trie) getChild(key byte) *trie {
+func (t *trie[ValueType]) getChild(key byte) *trie[ValueType] {
 	i := t.bmap.index(key)
 	if i == -1 {
 		return nil
@@ -111,7 +111,7 @@ func (t *trie) getChild(key byte) *trie {
 }
 
 // delChild removes child with the key and returns flag is removed or not
-func (t *trie) delChild(key byte) bool {
+func (t *trie[ValueType]) delChild(key byte) bool {
 	i := t.bmap.index(key)
 	if i == -1 {
 		return false

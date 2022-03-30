@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-var testTrie = New()
-var testFatTrie = NewFat()
+var testTrie = New[string]()
+var testFatTrie = NewFat[string]()
 
 func init() {
 	for _, s := range words {
@@ -81,7 +81,7 @@ func tr(b []byte) string {
 	if !ok {
 		return ""
 	}
-	v, _ := t.Value().(string)
+	v := t.Value()
 	return v
 }
 
@@ -90,7 +90,7 @@ func trfat(b []byte) string {
 	if !ok {
 		return ""
 	}
-	v, _ := t.Value().(string)
+	v := t.Value()
 	return v
 }
 
