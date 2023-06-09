@@ -17,19 +17,23 @@ type Trie[ValueType any] interface {
 
 // trie implements Trie interface
 type trie[ValueType any] struct {
-	key      byte
 	val      ValueType
-	bmap     bmap
+	bmap     *bmap
+	parent   *trie[ValueType]
 	children []*trie[ValueType]
 }
 
 // New creates a default Trie
-func New[ValueType any]() *trie[ValueType] {
-	return newTrieWithKey[ValueType](0)
+func New[ValueType any, T *trie[ValueType]]() T {
+	return newTrieWithParent((T)(nil))
 }
 
-func newTrieWithKey[ValueType any](key byte) *trie[ValueType] {
-	return &trie[ValueType]{key: key, children: make([]*trie[ValueType], 0)}
+func newTrieWithParent[ValueType any, T *trie[ValueType]](parent T) T {
+	return &trie[ValueType]{
+		parent:   parent,
+		children: make([]*trie[ValueType], 0),
+		bmap:     newBmap(),
+	}
 }
 
 func (t *trie[ValueType]) Insert(key []byte, value ValueType) Trie[ValueType] {
@@ -88,7 +92,7 @@ func (t *trie[ValueType]) insChild(key byte) *trie[ValueType] {
 		return child
 	}
 
-	child = newTrieWithKey[ValueType](key)
+	child = newTrieWithParent(t)
 	t.bmap.set(key)
 	i := t.bmap.index(key)
 	if i == len(t.children) {
@@ -98,6 +102,7 @@ func (t *trie[ValueType]) insChild(key byte) *trie[ValueType] {
 		copy(t.children[i+1:], t.children[i:])
 		t.children[i] = child
 	}
+
 	return child
 }
 

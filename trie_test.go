@@ -4,8 +4,10 @@ import (
 	"testing"
 )
 
-var testTrie = New[string]()
-var testFatTrie = NewFat[string]()
+var (
+	testTrie    = New[string]()
+	testFatTrie = NewFat[string]()
+)
 
 func init() {
 	for _, s := range words {
@@ -20,17 +22,6 @@ func Test_trie(t *testing.T) {
 		i := i
 		t.Run(words[i], func(t *testing.T) {
 			if s := tr(byteWords[i]); s != words[i] {
-				t.Fatalf("bad word: got %s, want %s", s, words[i])
-			}
-		})
-	}
-}
-
-func Test_fattrie(t *testing.T) {
-	for i := range byteWords {
-		i := i
-		t.Run(words[i], func(t *testing.T) {
-			if s := trfat(byteWords[i]); s != words[i] {
 				t.Fatalf("bad word: got %s, want %s", s, words[i])
 			}
 		})
@@ -56,19 +47,6 @@ func Benchmark_trie(b *testing.B) {
 		b.Run(words[i], func(b *testing.B) {
 			for j := 0; j < b.N; j++ {
 				if s := tr(byteWords[i]); s != words[i] {
-					b.Fatalf("bad word %#v", s)
-				}
-			}
-		})
-	}
-}
-
-func Benchmark_fattrie(b *testing.B) {
-	for i := range byteWords {
-		i := i
-		b.Run(words[i], func(b *testing.B) {
-			for j := 0; j < b.N; j++ {
-				if s := trfat(byteWords[i]); s != words[i] {
 					b.Fatalf("bad word %#v", s)
 				}
 			}

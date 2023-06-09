@@ -1,25 +1,28 @@
 package triego
 
 type fat[ValueType any] struct {
-	key      byte
+	parent   *fat[ValueType]
 	val      ValueType
-	children *[256]*fat[ValueType]
+	children [256]*fat[ValueType]
 }
 
 // NewFat creates Trie implementation, which more "fat"(uses more memory) than default
-func NewFat[ValueType any]() *fat[ValueType] {
-	return newFatWithKey[ValueType](0)
+func NewFat[ValueType any, T *fat[ValueType]]() T {
+	return newFatWithParent[ValueType]((T)(nil))
 }
 
-func newFatWithKey[ValueType any](key byte) *fat[ValueType] {
-	return &fat[ValueType]{key: key, children: &[256]*fat[ValueType]{}}
+func newFatWithParent[ValueType any, T *fat[ValueType]](parent T) T {
+	return &fat[ValueType]{
+		parent:   parent,
+		children: [256]*fat[ValueType]{},
+	}
 }
 
 func (f *fat[ValueType]) Insert(key []byte, value ValueType) Trie[ValueType] {
 	cur := f
 	for _, k := range key {
 		if cur.children[k] == nil {
-			cur.children[k] = newFatWithKey[ValueType](k)
+			cur.children[k] = newFatWithParent(f)
 		}
 		cur = cur.children[k]
 	}
@@ -31,7 +34,7 @@ func (f *fat[ValueType]) Delete(key []byte) bool {
 	if len(key) == 0 {
 		return false
 	}
-	ch := f.take(key[:len(key)-1])
+	ch := f.get(key[:len(key)-1])
 	if ch == nil {
 		return false
 	}
@@ -45,7 +48,7 @@ func (f *fat[ValueType]) Find(key []byte) (Trie[ValueType], bool) {
 	if len(key) == 0 {
 		return nil, false
 	}
-	v := f.take(key)
+	v := f.get(key)
 	return v, v != nil
 }
 
@@ -58,13 +61,17 @@ func (f *fat[ValueType]) Value() ValueType {
 	return f.val
 }
 
-func (f *fat[ValueType]) take(key []byte) *fat[ValueType] {
+func (f *fat[ValueType]) get(key []byte) *fat[ValueType] {
 	cur := f
-	for i := 0; i < len(key); i++ {
-		cur = cur.children[key[i]]
-		if cur == nil {
-			return nil
-		}
+	i := 0
+begin:
+	cur = cur.children[key[i]]
+	if cur == nil {
+		return nil
+	}
+	i++
+	if i < len(key) {
+		goto begin
 	}
 
 	return cur

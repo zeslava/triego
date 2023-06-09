@@ -14,16 +14,23 @@ type bmap struct {
 	c [4]int    // counts
 }
 
+func newBmap() *bmap {
+	return &bmap{
+		f: [4]uint64{},
+		c: [4]int{},
+	}
+}
+
 func (b *bmap) set(x byte) {
 	i := x >> shift
 	b.f[i] |= 1 << uint(x&mask)
-	b.c[i] = bits.OnesCount64(b.f[i])
+	b.c[i] += 1
 }
 
 func (b *bmap) unset(x byte) {
 	i := x >> shift
 	b.f[i] &^= 1 << uint(x&mask)
-	b.c[i] = bits.OnesCount64(b.f[i])
+	b.c[i] -= 1
 }
 
 func (b *bmap) has(x byte) bool {
@@ -36,21 +43,17 @@ func (b *bmap) index(x byte) int {
 		return -1
 	}
 
-	index := bits.OnesCount64(b.f[i]&ones[bits.Len64(1<<uint64(x&mask))]) - 1
 	if x < 64 {
-		return index
+		return bits.OnesCount64(b.f[i]&ones[bits.Len64(1<<uint64(x&mask))]) - 1
 	}
 	if x < 128 {
-		index += b.c[0]
-		return index
+		return bits.OnesCount64(b.f[i]&ones[bits.Len64(1<<uint64(x&mask))]) - 1 + b.c[0]
 	}
 	if x < 192 {
-		index += b.c[0] + b.c[1]
-		return index
+		return bits.OnesCount64(b.f[i]&ones[bits.Len64(1<<uint64(x&mask))]) - 1 + b.c[0] + b.c[1]
 	}
-	index += b.c[0] + b.c[1] + b.c[2]
 
-	return index
+	return bits.OnesCount64(b.f[i]&ones[bits.Len64(1<<uint64(x&mask))]) - 1 + b.c[0] + b.c[1] + b.c[2]
 }
 
 var ones = [65]uint64{
