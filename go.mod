@@ -1,3 +1,3 @@
-module github.com/slavablind91/triego
+module github.com/zeslava/triego
 
 go 1.20
