@@ -1,5 +1,7 @@
 package triego
 
+import "math/bits"
+
 // Trie is interface for prefix tree
 // Trie performs both tree and node roles, because node == sub-tree
 type Trie[ValueType any] interface {
@@ -84,12 +86,13 @@ func (t *trie[ValueType]) Cursor() Cursor[ValueType] {
 // Step moves the cursor to the child by key. If there is no such child,
 // it returns false and the cursor stays in place
 func (c *Cursor[ValueType]) Step(key byte) bool {
-	// getChild is written out by hand: through it Step costs 85 and exceeds the inlining budget of 80
-	ch := c.n.children[c.n.bmap.index(key)]
-	if ch == nil {
+	// getChild is written out by hand, through it Step costs 73 instead of 60 and is slower
+	b := &c.n.bmap
+	w := b.f[key>>shift]
+	if w>>(key&mask)&1 == 0 {
 		return false
 	}
-	c.n = ch
+	c.n = c.n.children[int(b.p[key>>shift])+bits.OnesCount64(w&(1<<(key&mask)-1))+1]
 	return true
 }
 
@@ -133,7 +136,13 @@ func (t *trie[ValueType]) insChild(key byte) *trie[ValueType] {
 
 // getChild returns child with the key
 func (t *trie[ValueType]) getChild(key byte) *trie[ValueType] {
-	return t.children[t.bmap.index(key)]
+	// bmap.index is written out: an early return for absent keys is cheaper
+	// than its branchless 0, which is not needed with the branch here
+	w := t.bmap.f[key>>shift]
+	if w>>(key&mask)&1 == 0 {
+		return nil
+	}
+	return t.children[int(t.bmap.p[key>>shift])+bits.OnesCount64(w&(1<<(key&mask)-1))+1]
 }
 
 // delChild removes child with the key and returns flag is removed or not
