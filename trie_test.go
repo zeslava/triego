@@ -107,6 +107,33 @@ func Test_delete(t *testing.T) {
 	}
 }
 
+func Test_cursor(t *testing.T) {
+	tr := New[string]()
+	tr.Insert([]byte("ab"), "ab")
+	tr.Insert([]byte("abcd"), "abcd")
+
+	c := tr.Cursor()
+	for _, step := range []struct {
+		key   byte
+		moved bool
+		val   string
+	}{
+		{'a', true, ""},
+		{'b', true, "ab"},
+		{'x', false, "ab"}, // no child, the cursor stays at "ab"
+		{'c', true, ""},
+		{'d', true, "abcd"},
+		{'e', false, "abcd"},
+	} {
+		if moved := c.Step(step.key); moved != step.moved {
+			t.Fatalf("Step(%q) = %v", step.key, moved)
+		}
+		if val := c.Value(); val != step.val {
+			t.Fatalf("after %q: Value() = %q", step.key, val)
+		}
+	}
+}
+
 // Test_random checks both implementations against a map oracle on keys using the full byte range
 func Test_random(t *testing.T) {
 	rnd := rand.New(rand.NewSource(1))

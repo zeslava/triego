@@ -174,6 +174,29 @@ func Benchmark_sigsSub(b *testing.B) {
 		})
 	}
 
+	tr := New[string]()
+	for _, k := range sigs.keys {
+		tr.Insert(k, string(k))
+	}
+	b.Run("cursor", func(b *testing.B) {
+		steps := 0
+		for i := 0; i < b.N; i++ {
+			c, last := tr.Cursor(), ""
+			for _, k := range sigs.inputs[i%len(sigs.inputs)] {
+				if !c.Step(k) {
+					break
+				}
+				steps++
+				if v := c.Value(); v != "" {
+					last = v
+				}
+			}
+			if last == "" {
+				b.Fatal("signature not found")
+			}
+		}
+		b.ReportMetric(float64(b.Elapsed().Nanoseconds())/float64(steps), "ns/step")
+	})
 }
 
 // Benchmark_dictInsert builds the whole dictionary per op, B/op is the memory footprint of the structure

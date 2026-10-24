@@ -70,6 +70,34 @@ func (t *trie[ValueType]) Value() ValueType {
 	return t.val
 }
 
+// Cursor walks the trie byte by byte, e.g. over a stream read in chunks.
+// Unlike Sub it is a concrete type, so Step is inlined and nothing is boxed into an interface
+type Cursor[ValueType any] struct {
+	n *trie[ValueType]
+}
+
+// Cursor returns a cursor at the root of t
+func (t *trie[ValueType]) Cursor() Cursor[ValueType] {
+	return Cursor[ValueType]{t}
+}
+
+// Step moves the cursor to the child by key. If there is no such child,
+// it returns false and the cursor stays in place
+func (c *Cursor[ValueType]) Step(key byte) bool {
+	// getChild is written out by hand: through it Step costs 85 and exceeds the inlining budget of 80
+	ch := c.n.children[c.n.bmap.index(key)]
+	if ch == nil {
+		return false
+	}
+	c.n = ch
+	return true
+}
+
+// Value returns the value at the cursor, the zero value if no key ends here
+func (c *Cursor[ValueType]) Value() ValueType {
+	return c.n.val
+}
+
 // take returns subtree by key
 func (t *trie[ValueType]) take(key []byte) *trie[ValueType] {
 	cur := t
