@@ -107,16 +107,6 @@ func Test_delete(t *testing.T) {
 	}
 }
 
-func Test_insertedChildParent(t *testing.T) {
-	tr := NewFat[string]()
-	tr.Insert([]byte("ab"), "ab")
-	a, _ := tr.Find([]byte("a"))
-	b, _ := tr.Find([]byte("ab"))
-	if b.(*fat[string]).parent != a.(*fat[string]) {
-		t.Error("parent of ab is not a")
-	}
-}
-
 // Test_random checks both implementations against a map oracle on keys using the full byte range
 func Test_random(t *testing.T) {
 	rnd := rand.New(rand.NewSource(1))

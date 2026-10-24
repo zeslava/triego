@@ -19,18 +19,16 @@ type Trie[ValueType any] interface {
 type trie[ValueType any] struct {
 	val      ValueType
 	bmap     bmap
-	parent   *trie[ValueType]
 	children []*trie[ValueType]
 }
 
 // New creates a default Trie
 func New[ValueType any, T *trie[ValueType]]() T {
-	return newTrieWithParent(T(nil))
+	return newTrie[ValueType]()
 }
 
-func newTrieWithParent[ValueType any, T *trie[ValueType]](parent T) T {
+func newTrie[ValueType any]() *trie[ValueType] {
 	return &trie[ValueType]{
-		parent:   parent,
 		children: make([]*trie[ValueType], 1), // [0] is a nil sentinel for absent keys, see bmap.index
 	}
 }
@@ -91,7 +89,7 @@ func (t *trie[ValueType]) insChild(key byte) *trie[ValueType] {
 		return child
 	}
 
-	child = newTrieWithParent(t)
+	child = newTrie[ValueType]()
 	t.bmap.set(key)
 	i := t.bmap.index(key)
 	if i == len(t.children) {

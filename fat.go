@@ -1,28 +1,20 @@
 package triego
 
 type fat[ValueType any] struct {
-	parent   *fat[ValueType]
 	val      ValueType
 	children [256]*fat[ValueType]
 }
 
 // NewFat creates Trie implementation, which more "fat"(uses more memory) than default
 func NewFat[ValueType any, T *fat[ValueType]]() T {
-	return newFatWithParent[ValueType](T(nil))
-}
-
-func newFatWithParent[ValueType any, T *fat[ValueType]](parent T) T {
-	return &fat[ValueType]{
-		parent:   parent,
-		children: [256]*fat[ValueType]{},
-	}
+	return &fat[ValueType]{}
 }
 
 func (f *fat[ValueType]) Insert(key []byte, value ValueType) Trie[ValueType] {
 	cur := f
 	for _, k := range key {
 		if cur.children[k] == nil {
-			cur.children[k] = newFatWithParent(cur)
+			cur.children[k] = &fat[ValueType]{}
 		}
 		cur = cur.children[k]
 	}
