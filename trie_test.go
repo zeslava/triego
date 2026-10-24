@@ -1,6 +1,7 @@
 package triego
 
 import (
+	"math/rand"
 	"testing"
 )
 
@@ -61,6 +62,110 @@ func tr(b []byte) string {
 	}
 	v := t.Value()
 	return v
+}
+
+var impls = map[string]func() Trie[string]{
+	"trie": func() Trie[string] { return New[string]() },
+	"fat":  func() Trie[string] { return NewFat[string]() },
+}
+
+func Test_findMissing(t *testing.T) {
+	for name, newTrie := range impls {
+		t.Run(name, func(t *testing.T) {
+			tr := newTrie()
+			tr.Insert([]byte("a"), "a")
+			tr.Insert([]byte("c"), "c")
+			tr.Insert([]byte{200}, "200")
+			for _, k := range [][]byte{[]byte("b"), []byte("d"), []byte("ab"), {199}, {201}, {0}, {255}} {
+				if n, ok := tr.Find(k); ok {
+					t.Errorf("Find(%q): got %q, want not found", k, n.Value())
+				}
+			}
+		})
+	}
+}
+
+func Test_delete(t *testing.T) {
+	for name, newTrie := range impls {
+		t.Run(name, func(t *testing.T) {
+			tr := newTrie()
+			tr.Insert([]byte("abc"), "abc")
+			tr.Insert([]byte("abd"), "abd")
+			if !tr.Delete([]byte("abc")) {
+				t.Fatal("Delete(abc): got false, want true")
+			}
+			if _, ok := tr.Find([]byte("abc")); ok {
+				t.Error("Find(abc) after delete: got found")
+			}
+			if n, ok := tr.Find([]byte("abd")); !ok || n.Value() != "abd" {
+				t.Error("Find(abd) after deleting sibling: got not found")
+			}
+			if tr.Delete([]byte("abc")) {
+				t.Error("second Delete(abc): got true, want false")
+			}
+		})
+	}
+}
+
+func Test_insertedChildParent(t *testing.T) {
+	tr := NewFat[string]()
+	tr.Insert([]byte("ab"), "ab")
+	a, _ := tr.Find([]byte("a"))
+	b, _ := tr.Find([]byte("ab"))
+	if b.(*fat[string]).parent != a.(*fat[string]) {
+		t.Error("parent of ab is not a")
+	}
+}
+
+// Test_random checks both implementations against a map oracle on keys using the full byte range
+func Test_random(t *testing.T) {
+	rnd := rand.New(rand.NewSource(1))
+	genKey := func() []byte {
+		k := make([]byte, 1+rnd.Intn(8))
+		rnd.Read(k)
+		return k
+	}
+
+	for name, newTrie := range impls {
+		t.Run(name, func(t *testing.T) {
+			tr := newTrie()
+			paths := map[string]bool{}
+			values := map[string]string{}
+			for i := 0; i < 2000; i++ {
+				k := genKey()
+				tr.Insert(k, string(k))
+				values[string(k)] = string(k)
+				for j := 1; j <= len(k); j++ {
+					paths[string(k[:j])] = true
+				}
+			}
+
+			for k, v := range values {
+				if n, ok := tr.Find([]byte(k)); !ok || n.Value() != v {
+					t.Fatalf("Find(%q): inserted key not found", k)
+				}
+			}
+			for i := 0; i < 10000; i++ {
+				k := genKey()
+				if _, ok := tr.Find(k); ok != paths[string(k)] {
+					t.Fatalf("Find(%q): got %v, want %v", k, ok, paths[string(k)])
+				}
+			}
+		})
+	}
+}
+
+func Benchmark_findMissing(b *testing.B) {
+	keys := [][]byte{[]byte("abatiz"), []byte("aaz"), []byte("abandonwarez"), []byte("zzz")}
+	for name, tr := range map[string]Trie[string]{"trie": testTrie, "fat": testFatTrie} {
+		for _, k := range keys {
+			b.Run(name+"/"+string(k), func(b *testing.B) {
+				for j := 0; j < b.N; j++ {
+					tr.Find(k)
+				}
+			})
+		}
+	}
 }
 
 func trfat(b []byte) string {

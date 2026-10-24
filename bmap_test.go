@@ -21,9 +21,9 @@ func Test_bmap(t *testing.T) {
 	}
 
 	t.Run("empty", func(t *testing.T) {
-		bm := newBmap()
+		var bm bmap
 		for i := 0; i < 255; i++ {
-			if bm.index(byte(i)) > -1 {
+			if bm.index(byte(i)) != 0 {
 				t.Fail()
 			}
 		}
@@ -34,13 +34,13 @@ func Test_bmap(t *testing.T) {
 		t.Run(strconv.Itoa(j), func(t *testing.T) {
 			bs := genbs()
 
-			bm := newBmap()
+			var bm bmap
 			for i, b := range bs {
 				i := i
 				b := b
 				bm.set(b)
 				index := bm.index(b)
-				if index != i {
+				if index != i+1 {
 					t.Errorf("%d: %d", i, b)
 				}
 			}
@@ -65,7 +65,7 @@ func Test_bmap(t *testing.T) {
 }
 
 func Benchmark_bmap_index(b *testing.B) {
-	bm := newBmap()
+	var bm bmap
 
 	for index, v := range []byte{10, 70, 150, 200, 250} {
 		bm.set(v)
@@ -73,7 +73,7 @@ func Benchmark_bmap_index(b *testing.B) {
 		v := v
 		b.Run(strconv.Itoa(int(v)), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if j := bm.index(v); j != index {
+				if j := bm.index(v); j != index+1 {
 					b.Fatal("wrong index", j)
 				}
 			}
