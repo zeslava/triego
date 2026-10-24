@@ -8,7 +8,7 @@ type fat[ValueType any] struct {
 
 // NewFat creates Trie implementation, which more "fat"(uses more memory) than default
 func NewFat[ValueType any, T *fat[ValueType]]() T {
-	return newFatWithParent[ValueType]((T)(nil))
+	return newFatWithParent[ValueType](T(nil))
 }
 
 func newFatWithParent[ValueType any, T *fat[ValueType]](parent T) T {
@@ -22,7 +22,7 @@ func (f *fat[ValueType]) Insert(key []byte, value ValueType) Trie[ValueType] {
 	cur := f
 	for _, k := range key {
 		if cur.children[k] == nil {
-			cur.children[k] = newFatWithParent(f)
+			cur.children[k] = newFatWithParent(cur)
 		}
 		cur = cur.children[k]
 	}
@@ -39,8 +39,8 @@ func (f *fat[ValueType]) Delete(key []byte) bool {
 		return false
 	}
 	k := key[len(key)-1]
-	has := f.children[k] != nil
-	f.children[k] = nil
+	has := ch.children[k] != nil
+	ch.children[k] = nil
 	return has
 }
 
