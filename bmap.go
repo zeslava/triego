@@ -14,7 +14,12 @@ const (
 
 type bmap struct {
 	f [4]uint64 // fields: bit (x&mask) of f[x>>shift] is set if key x is present
-	p [4]int    // p[i] is the number of set bits in f[0..i-1], so p[0] is always 0
+	// p[i] is the number of set bits in f[0..i-1], so p[0] is always 0.
+	// The word f[i] itself is not included, its bits are counted by popcount in index,
+	// so the max is p[3] = 3*64 = 192 (f[0..2] full), which fits uint8.
+	// The total count of 256 would not fit, but it is never stored.
+	// uint8 instead of int shrinks bmap from 64 to 36 bytes, so more nodes fit in cache
+	p [4]uint8
 }
 
 // set marks x as present. Must not be called for an already present x,
@@ -54,7 +59,7 @@ func (b *bmap) index(x byte) int {
 	// 1<<(x&mask)-1 is a word with all bits below x's set (e.g. x&mask=3 -> 0b0111),
 	// so the popcount counts present keys in x's word that are less than x.
 	// Adding p gives the count of all present keys less than x
-	rank := b.p[x>>shift] + bits.OnesCount64(w&(1<<(x&mask)-1))
+	rank := int(b.p[x>>shift]) + bits.OnesCount64(w&(1<<(x&mask)-1))
 
 	// -bit is 0 for absent and all ones (-1) for present x,
 	// so AND gives either 0 or rank+1 without a branch
